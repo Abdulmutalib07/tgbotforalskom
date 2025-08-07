@@ -1,7 +1,7 @@
 from aiogram import Router, types, F
 from datetime import datetime
 
-from config import COMMITTEE_CHAT_ID
+from bot.utils.config import COMMITTEE_CHAT_ID
 
 from bot.db.committee_queries import (
     update_request_status,

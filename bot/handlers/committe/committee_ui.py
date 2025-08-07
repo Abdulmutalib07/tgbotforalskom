@@ -2,7 +2,7 @@ from aiogram import Router
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from bot.db.committee_queries import get_new_requests, get_users_pending_vote, get_all_users, log_action, \
     get_accepted_outside_bot_requests, get_all_votes_with_names
-from config import COMMITTEE_CHAT_ID
+from bot.utils.config import COMMITTEE_CHAT_ID
 
 router = Router()
 

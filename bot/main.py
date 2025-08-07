@@ -7,7 +7,7 @@ from aiogram.filters import Command
 
 from bot.handlers.orders.notifier import notify_new_orders
 from bot.utils.config import BOT_TOKEN
-from handlers.start import cmd_start
+from bot.handlers.start import cmd_start
 from bot.handlers.committe.committee_ui import send_new_requests, send_followup_requests, notify_external_acceptances, \
     log_external_acceptances, send_final_decisions
 from bot.handlers.committe.committee_logic import router as committee_logic_router

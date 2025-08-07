@@ -1,10 +1,11 @@
-import os
-from aiogram import Bot
-from handlers.orders.logic import format_order_message
-from db.orders_queries import get_today_orders, get_order_votes
-from utils.logger import log_action
 
-GROUP_ID = int(os.getenv("GROUP_CHAT_ID"))
+from aiogram import Bot
+from bot.handlers.orders.logic import format_order_message
+from bot.db.orders_queries import get_today_orders, get_order_votes
+from bot.utils.logger import log_action
+from bot.utils.config import ORDERS_CHAT_ID
+
+ORDERS_CHAT_ID = -4965692824
 
 async def notify_new_orders(bot: Bot):
     orders = get_today_orders()
@@ -13,5 +14,5 @@ async def notify_new_orders(bot: Bot):
         votes = get_order_votes(order_id)
 
         message = format_order_message(order_id, date, amount, votes)
-        await bot.send_message(chat_id=GROUP_ID, text=message)
+        await bot.send_message(chat_id=ORDERS_CHAT_ID, text=message)
         log_action(order_id, type='RASPOR')

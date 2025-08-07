@@ -5,7 +5,8 @@ from aiogram import Bot, Dispatcher, Router
 from aiogram.types import Message
 from aiogram.filters import Command
 
-from config import BOT_TOKEN
+from bot.handlers.orders.notifier import notify_new_orders
+from bot.utils.config import BOT_TOKEN
 from handlers.start import cmd_start
 from bot.handlers.committe.committee_ui import send_new_requests, send_followup_requests, notify_external_acceptances, \
     log_external_acceptances, send_final_decisions
@@ -45,6 +46,23 @@ async def main():
     asyncio.create_task(periodic_check(bot)) # фоновая проверка заявок
     print("🚀 Бот начал polling")
     await dp.start_polling(bot)               # бот слушает команды
+
+async def orders_loop():
+    while True:
+        await notify_new_orders(bot)
+        await asyncio.sleep(30)
+
+async def committee_loop():
+    while True:
+        await send_new_requests(bot)
+        await asyncio.sleep(30)
+
+async def main():
+    await asyncio.gather(
+        orders_loop(),
+        committee_loop()
+    )
+
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -1,6 +1,6 @@
 import oracledb
 
-from bot.config import ORACLE_CONFIG
+from bot.utils.config import ORACLE_CONFIG
 oracledb.init_oracle_client(lib_dir="/Users/abdulmutalib_007/oracle_client/instantclient_23_3")
 
 

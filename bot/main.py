@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import oracledb
 
 from aiogram import Bot, Dispatcher, Router
 from aiogram.types import Message
@@ -8,9 +7,9 @@ from aiogram.filters import Command
 
 from config import BOT_TOKEN
 from handlers.start import cmd_start
-from handlers.committee_ui import send_new_requests, send_followup_requests, notify_external_acceptances, \
+from bot.handlers.committe.committee_ui import send_new_requests, send_followup_requests, notify_external_acceptances, \
     log_external_acceptances, send_final_decisions
-from handlers.committee_logic import router as committee_logic_router
+from bot.handlers.committe.committee_logic import router as committee_logic_router
 
 
 logging.basicConfig(level=logging.INFO)

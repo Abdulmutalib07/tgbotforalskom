@@ -30,9 +30,62 @@ def get_order_votes(order_id):
         FROM INS_COST_ORDER_MEMBER M
         JOIN TB_USERS U ON U.tb_ID = M.USER_ID
         WHERE M.ORD_ID = :order_id
+        ORDER BY CASE M.USER_ID
+            WHEN 56   THEN 1
+            WHEN 2003 THEN 2
+            WHEN 26   THEN 3
+            WHEN 1771 THEN 4
+            ELSE 5
+          END 
     """,{"order_id": order_id})
 
     results = cursor.fetchall()
     cursor.close()
     conn.close()
     return results
+
+def get_vote_status(order_id, telegram_id):
+    conn = oracledb.connect(**ORACLE_CONFIG)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT VOTE
+        FROM INS_COST_ORDER_MEMBER
+        WHERE ORD_ID = :ORDER_ID
+          AND USER_ID = (SELECT TB_ID FROM TB_USERS WHERE TELEGRAM_ID = :TG_ID)
+    """, {"ORDER_ID": order_id, "TG_ID": str(telegram_id)})
+    result = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return result[0] if result else None
+
+
+def set_vote(order_id, telegram_id, vote):
+    conn = oracledb.connect(**ORACLE_CONFIG)
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE INS_COST_ORDER_MEMBER
+        SET VOTE = :VOTE
+        WHERE ORD_ID = :ORDER_ID
+          AND USER_ID = (SELECT TB_ID FROM TB_  USERS WHERE TELEGRAM_ID = :TG_ID)
+    """, {"VOTE": vote, "ORDER_ID": order_id, "TG_ID": str(telegram_id)})
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+def get_pending_orders():
+    conn = oracledb.connect(**ORACLE_CONFIG)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT b.REQ_ID, b.MESSAGE_ID
+        FROM BOT_LOGS b
+        JOIN INS_COST_ORDER o ON o.INS_ID = b.REQ_ID
+        WHERE o.ORDER_TYPE = 5
+        AND EXISTS (
+            SELECT 1 FROM INS_COST_ORDER_MEMBER m
+            WHERE m.ORD_ID = o.INS_ID AND m.VOTE = 0
+        )
+    """)
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return rows

@@ -5,9 +5,6 @@ from bot.db.orders_queries import get_today_orders, get_order_votes, get_vote_st
 from bot.utils.logger import log_action
 from bot.utils.config import ORDERS_CHAT_ID
 
-
-ORDERS_CHAT_ID = -4965692824
-
 async def notify_new_orders(bot: Bot):
     orders = get_today_orders()
     for order in orders:
@@ -20,7 +17,7 @@ async def notify_new_orders(bot: Bot):
             text=message,
             reply_markup=approve_button(order_id))
 
-        log_action(order_id, type='RASPOR', message_id=msg.message_id)
+        log_action(order_id, action_type='RASPOR', message_id=msg.message_id)
 
 def register_order_handlers(dp):
     @dp.callback_query(lambda c: c.data.startswith("approve:"))

@@ -1,15 +1,14 @@
+from aiogram.types import InlineKeyboardButton
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+
 from bot.db.orders_queries import get_today_orders, get_order_votes
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-def approve_button(order_id):
-    kb = InlineKeyboardMarkup()
-    kb.add(
-        InlineKeyboardButton(
-            text="✅ Одобрить",
-            callback_data=f"approve:{order_id}"
-        )
-    )
-    return kb
+def approve_button(order_id: int):
+    kb = InlineKeyboardBuilder()
+    kb.button(text="✅ Одобрить", callback_data=f"approve:{order_id}")
+    kb.adjust(1)
+    return kb.as_markup()
 
 
 def format_votes(votes):
@@ -18,6 +17,7 @@ def format_votes(votes):
         mark = "✅" if vote else "⏳"
         result += f"{mark} {full_name}\n"
     return result
+
 
 def format_order_message(order_id, date, amount, votes):
     return (

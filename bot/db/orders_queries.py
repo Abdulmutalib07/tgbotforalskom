@@ -62,15 +62,42 @@ def get_vote_status(order_id, telegram_id):
 def set_vote(order_id, telegram_id, vote):
     conn = oracledb.connect(**ORACLE_CONFIG)
     cursor = conn.cursor()
+
+    # 1. Ставим голос
     cursor.execute("""
         UPDATE INS_COST_ORDER_MEMBER
         SET VOTE = :VOTE
         WHERE ORD_ID = :ORDER_ID
-          AND USER_ID = (SELECT TB_ID FROM TB_  USERS WHERE TELEGRAM_ID = :TG_ID)
-    """, {"VOTE": vote, "ORDER_ID": order_id, "TG_ID": str(telegram_id)})
+          AND USER_ID = (SELECT TB_ID FROM TB_USERS WHERE TELEGRAM_ID = :TG_ID)
+    """, {
+        "VOTE": vote,
+        "ORDER_ID": order_id,
+        "TG_ID": str(telegram_id)
+    })
     conn.commit()
+
+    # 2. Проверяем — остались ли те, кто не проголосовал
+    cursor.execute("""
+        SELECT COUNT(*) 
+        FROM INS_COST_ORDER_MEMBER
+        WHERE ORD_ID = :ORDER_ID AND VOTE = 0
+    """, {"ORDER_ID": order_id})
+    left_cnt, = cursor.fetchone()
+
+    # 3. Если все проголосовали — пишем в BOT_LOGS
+    if left_cnt == 0:
+        cursor.execute("""
+            INSERT INTO BOT_LOGS (REQ_ID, ACTION_TYPE, DETAILS)
+            VALUES (:id, 'RASPOR_DONE', 'Все участники одобрили')
+        """, {"id": order_id})
+        conn.commit()
+
     cursor.close()
     conn.close()
+
+    return left_cnt  # можно вернуть, чтобы обработчик понимал
+
+
 
 def get_pending_orders():
     conn = oracledb.connect(**ORACLE_CONFIG)
@@ -80,6 +107,10 @@ def get_pending_orders():
         FROM BOT_LOGS b
         JOIN INS_COST_ORDER o ON o.INS_ID = b.REQ_ID
         WHERE o.ORDER_TYPE = 5
+        AND NOT EXISTS (
+            SELECT 1 FROM BOT_LOGS b2
+                WHERE b2.REQ_ID = b.REQ_ID AND b2.ACTION_TYPE = 'RASPOR_DONE'
+  )
         AND EXISTS (
             SELECT 1 FROM INS_COST_ORDER_MEMBER m
             WHERE m.ORD_ID = o.INS_ID AND m.VOTE = 0
@@ -89,3 +120,15 @@ def get_pending_orders():
     cursor.close()
     conn.close()
     return rows
+
+def get_order_by_id(order_id):
+    conn = oracledb.connect(**ORACLE_CONFIG)
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT INS_ID, CREATED_DATE, ORDER_SUM, ORDER_TYPE
+        FROM INS_COST_ORDER
+        WHERE INS_ID = :ORDER_ID
+    """, {"ORDER_ID": order_id})
+    row = cur.fetchone()
+    cur.close(); conn.close()
+    return row  # (INS_ID, CREATED_DATE, ORDER_SUM, ORDER_TYPE)

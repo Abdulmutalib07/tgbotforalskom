@@ -5,7 +5,7 @@ from aiogram import Bot, Dispatcher, Router
 from aiogram.types import Message
 from aiogram.filters import Command
 
-from bot.db.orders_queries import get_pending_orders
+from bot.handlers.orders.logic import format_order_message, approve_button
 from bot.handlers.orders.notifier import notify_new_orders
 from bot.utils.config import BOT_TOKEN, ORDERS_CHAT_ID
 from bot.handlers.start import cmd_start
@@ -13,6 +13,7 @@ from bot.handlers.committe.committee_ui import send_new_requests, send_followup_
     log_external_acceptances, send_final_decisions
 from bot.handlers.committe.committee_logic import router as committee_logic_router
 from bot.handlers.orders.notifier import register_order_handlers
+from bot.db.orders_queries import get_pending_orders, get_order_by_id, get_order_votes
 
 
 logging.basicConfig(level=logging.INFO)
@@ -60,13 +61,26 @@ async def orders_loop():
         await notify_new_orders(bot)
         # 2. Обновляем распоряжения, где ещё не все проголосовали
         for order_id, msg_id in get_pending_orders():
-            text, keyboard = format_order_message_with_keyboard(order_id)
-            await bot.edit_message_text(
-                chat_id=ORDERS_CHAT_ID,
-                message_id=msg_id,
-                text=text,
-                reply_markup=keyboard
-            )
+            order = get_order_by_id(order_id)
+            if not order:
+                continue
+            _, created_date, amount, _ = order
+            votes = get_order_votes(order_id)
+            text = format_order_message(order_id, created_date, amount, votes)
+
+            try:
+                await bot.edit_message_text(
+                    chat_id=ORDERS_CHAT_ID,
+                    message_id=msg_id,
+                    text=text,
+                    reply_markup=approve_button(order_id)
+                )
+            except Exception as e:
+                # Игнорируем "message is not modified" и подобные
+                if "message is not modified" in str(e).lower():
+                    pass
+                else:
+                    print(f"edit_message_text error for {order_id}: {e}")
 
         await asyncio.sleep(30)
 

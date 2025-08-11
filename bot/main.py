@@ -14,6 +14,7 @@ from bot.handlers.committe.committee_ui import send_new_requests, send_followup_
 from bot.handlers.committe.committee_logic import router as committee_logic_router
 from bot.handlers.orders.notifier import register_order_handlers
 from bot.db.orders_queries import get_pending_orders, get_order_by_id, get_order_votes
+from bot.handlers.orders.callback import orders_router
 
 
 logging.basicConfig(level=logging.INFO)
@@ -134,6 +135,13 @@ async def main():
         committee_loop()
     )
 
+async def main():
+    dp.include_router(orders_router)
+    await asyncio.gather(
+        dp.start_polling(bot),
+        orders_loop(),
+        committee_loop(),
+    )
 
 if __name__ == "__main__":
     asyncio.run(main())

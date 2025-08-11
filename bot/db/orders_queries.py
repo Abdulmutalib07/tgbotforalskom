@@ -103,7 +103,7 @@ def get_pending_orders():
     conn = oracledb.connect(**ORACLE_CONFIG)
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT b.REQ_ID, b.MESSAGE_ID
+        SELECT DISTINCT b.REQ_ID, b.MESSAGE_ID, b.CHAT_ID
         FROM BOT_LOGS b
         JOIN INS_COST_ORDER o ON o.INS_ID = b.REQ_ID
         WHERE o.ORDER_TYPE = 5

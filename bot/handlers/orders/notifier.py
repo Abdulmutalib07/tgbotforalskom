@@ -17,7 +17,8 @@ async def notify_new_orders(bot: Bot):
             text=message,
             reply_markup=approve_button(order_id))
 
-        log_action(order_id, action_type='RASPOR', message_id=msg.message_id)
+        log_action(order_id, action_type='RASPOR', message_id=msg.message_id, chat_id=msg.chat.id)
+
 
 def register_order_handlers(dp):
     @dp.callback_query(lambda c: c.data.startswith("approve:"))

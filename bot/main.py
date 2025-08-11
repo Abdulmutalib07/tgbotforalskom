@@ -51,7 +51,8 @@ async def main():
     await dp.start_polling(bot)               # бот слушает команды
 
 
-def format_order_message_with_keyboard(order_id):
+
+def upsert_message_id(order_id, message_id, chat_id):
     pass
 
 
@@ -60,7 +61,26 @@ async def orders_loop():
         # 1. Отправляем новые распоряжения
         await notify_new_orders(bot)
         # 2. Обновляем распоряжения, где ещё не все проголосовали
-        for order_id, msg_id in get_pending_orders():
+        for order_id, msg_id, chat_id in get_pending_orders():
+            if msg_id is None or chat_id is None:
+                # можно сразу отправить новое сообщение и обновить лог
+                order = get_order_by_id(order_id)
+                if not order:
+                    continue
+                _, created_date, amount, _ = order
+                votes = get_order_votes(order_id)
+                text = format_order_message(order_id, created_date, amount, votes)
+
+                new_msg = await bot.send_message(
+                    chat_id=ORDERS_CHAT_ID,  # или int(chat_id) если он есть
+                    text=text,
+                    reply_markup=approve_button(order_id)
+                )
+                upsert_message_id(order_id, new_msg.message_id, new_msg.chat.id)
+                continue
+            cid = int(chat_id) if chat_id is not None else ORDERS_CHAT_ID
+            mid = int(msg_id)
+
             order = get_order_by_id(order_id)
             if not order:
                 continue
@@ -70,15 +90,26 @@ async def orders_loop():
 
             try:
                 await bot.edit_message_text(
-                    chat_id=ORDERS_CHAT_ID,
-                    message_id=msg_id,
+                    chat_id=cid,
+                    message_id=mid,
                     text=text,
                     reply_markup=approve_button(order_id)
                 )
             except Exception as e:
+                s = str(e).lower()
                 # Игнорируем "message is not modified" и подобные
-                if "message is not modified" in str(e).lower():
+                if "message is not modified" in s:
                     pass
+                elif "message to edit not found" in s:
+                    # сообщение удалили/не нашли — отправляем заново и обновляем лог
+                    new_msg = await bot.send_message(
+                        chat_id=cid,
+                        text=text,
+                        reply_markup=approve_button(order_id)
+                    )
+                    # перезапишем message_id в логах
+                    upsert_message_id(order_id, new_msg.message_id, new_msg.chat.id)
+
                 else:
                     print(f"edit_message_text error for {order_id}: {e}")
 

@@ -56,7 +56,7 @@ def get_vote_status(order_id, telegram_id):
     result = cursor.fetchone()
     cursor.close()
     conn.close()
-    return result[0] if result else None
+    return row[0] if row else None
 
 
 def set_vote(order_id, telegram_id, vote):
@@ -74,14 +74,30 @@ def set_vote(order_id, telegram_id, vote):
         "ORDER_ID": order_id,
         "TG_ID": str(telegram_id)
     })
+    updated = cur.rowcount
     conn.commit()
 
+    # после updated/commit
+    conn2 = oracledb.connect(**ORACLE_CONFIG)
+    c2 = conn2.cursor()
+    c2.execute("SELECT COUNT(*) FROM INS_COST_ORDER_MEMBER WHERE ORD_ID=:ORDER_ID AND VOTE=0",
+               {"ORDER_ID": order_id})
+    left, = c2.fetchone()
+    if left == 0:
+        c2.execute(
+            "INSERT INTO BOT_LOGS (REQ_ID, ACTION_TYPE, DETAILS) VALUES "
+            "(:id, 'RASPOR_DONE', 'Все участники одобрили')",
+            {"id": str(order_id)})
+        conn2.commit()
+    c2.close();
+    conn2.close()
     # 2. Проверяем — остались ли те, кто не проголосовал
     cursor.execute("""
         SELECT COUNT(*) 
         FROM INS_COST_ORDER_MEMBER
         WHERE ORD_ID = :ORDER_ID AND VOTE = 0
     """, {"ORDER_ID": order_id})
+
     left_cnt, = cursor.fetchone()
 
     # 3. Если все проголосовали — пишем в BOT_LOGS

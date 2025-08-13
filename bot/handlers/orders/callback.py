@@ -16,6 +16,24 @@ async def approve_cb(callback: types.CallbackQuery):
 
     # Обновляем голос
     set_vote(order_id, tg_id, 1)
+    order = get_order_by_id(order_id)
+    created_date, amount = (order[1], order[2]) if order else (None, None)
+    votes = get_order_votes(order_id)
+    text = format_order_message(order_id, created_date, amount, votes)
+
+    try:
+        await callback.message.edit_text(text, reply_markup=approve_button(order_id))
+    except Exception as e:
+        if "message is not modified" not in str(e).lower():
+            print("edit_text error:", e)
+
+    updated, after = set_vote(order_id, tg_id, 1)
+    print(f"[DEBUG] set_vote rowcount={updated}, after={after}")
+    if updated == 0:
+        await callback.answer("Не найдено соответствие пользователя в ORD_ID. Сообщи админy.", show_alert=True)
+        return
+
+
 
     # Пересобираем текст
     order = get_order_by_id(order_id)
@@ -32,3 +50,4 @@ async def approve_cb(callback: types.CallbackQuery):
             print("edit_text error:", e)
 
     await callback.answer("Ваш голос принят ✅")
+
